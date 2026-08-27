@@ -1,95 +1,56 @@
-// Get references to DOM elements
+// --- STATE MANAGEMENT ---
+// We use a new key to avoid conflicts with the old gamified data
+let tasks = JSON.parse(localStorage.getItem('drawdo_pro_tasks')) || [];
+let currentFilter = 'all'; // Filters: 'all', 'active', 'completed'
+
+function saveTasks() {
+    localStorage.setItem('drawdo_pro_tasks', JSON.stringify(tasks));
+    updateCounters();
+}
+
+// Commercial-grade Toast Notification System
+function showToast(message, icon = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i data-lucide="${icon}"></i> ${message}`;
+    container.appendChild(toast);
+    
+    // Render the injected icon
+    if(window.lucide) { lucide.createIcons(); }
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// --- UI LOGIC ---
 const grid = document.getElementById('grid');
 const addBtn = document.getElementById('add-btn');
 
-// --- GAMIFICATION SYSTEM ---
-// Load player stats from local storage
-let stats = JSON.parse(localStorage.getItem('drawdo_stats')) || { level: 1, xp: 0 };
-const xpPerTask = 20; // How much XP you get for finishing a task
-const xpToNextLevel = 100;
-
-function saveStats() {
-    localStorage.setItem('drawdo_stats', JSON.stringify(stats));
+function updateCounters() {
+    const activeCount = tasks.filter(t => !t.done).length;
+    document.getElementById('task-counter').textContent = `${activeCount} Active Task${activeCount !== 1 ? 's' : ''}`;
 }
 
-// Update the UI Header with current XP and Level
-function updateStatsUI() {
-    document.getElementById('level-display').textContent = stats.level;
-    document.getElementById('xp-display').textContent = stats.xp;
-    const progress = (stats.xp / xpToNextLevel) * 100;
-    document.getElementById('xp-fill').style.width = `${progress}%`;
-}
-
-// Simple Web Audio Synth for retro sound effects (No external audio files needed!)
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-
-function playSuccessSound() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    osc.type = 'square'; // 8-bit retro sound
-    osc.frequency.setValueAtTime(440, audioCtx.currentTime); // Pitch start
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // Pitch slide up
-    
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Volume start
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2); // Fade out
-    
-    osc.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.2);
-}
-
-// Handle giving XP and Leveling Up
-function giveXP(amount) {
-    stats.xp += amount;
-    if (stats.xp >= xpToNextLevel) {
-        // LEVEL UP!
-        stats.level += 1;
-        stats.xp -= xpToNextLevel;
-        
-        // Massive Confetti Explosion!
-        confetti({ 
-            particleCount: 200, 
-            spread: 120, 
-            origin: { y: 0.4 }, 
-            colors: ['#fbbf24', '#f87171', '#34d399', '#60a5fa'] 
-        });
-    }
-    saveStats();
-    updateStatsUI();
-}
-
-// Initialize Stats UI on load
-updateStatsUI();
-
-
-// --- TASK MANAGEMENT SYSTEM ---
-// Load tasks from localStorage or start with one empty task
-let tasks = JSON.parse(localStorage.getItem('drawdo_tasks')) || [
-    { id: Date.now().toString(), dataUrl: null, done: false, isText: false, textContent: "" }
-];
-
-function saveTasks() {
-    localStorage.setItem('drawdo_tasks', JSON.stringify(tasks));
-}
-
-// Setup the Canvas Drawing Engine
+// Draw engine logic (Optimized for robustness)
 function setupCanvasDrawing(card, canvas, task) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const colorPicker = card.querySelector('.color-picker');
     const sizeSlider = card.querySelector('.size-slider');
     
-    canvas.width = 300;
-    canvas.height = 300;
+    // High-resolution internal canvas for crisp drawing
+    canvas.width = 600;
+    canvas.height = 600;
 
     let isDrawing = false;
     let lastX = 0;
     let lastY = 0;
 
+    // Load saved image
     if (task.dataUrl) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -109,7 +70,7 @@ function setupCanvasDrawing(card, canvas, task) {
     }
 
     function startDrawing(e) {
-        if (task.done || task.isText) return; // Prevent drawing if done or in text mode
+        if (task.done || task.isText) return;
         isDrawing = true;
         const { x, y } = getCoordinates(e);
         lastX = x;
@@ -138,127 +99,114 @@ function setupCanvasDrawing(card, canvas, task) {
     function stopDrawing() {
         if (isDrawing) {
             isDrawing = false;
-            task.dataUrl = canvas.toDataURL(); // Save canvas as image
+            task.dataUrl = canvas.toDataURL();
             saveTasks();
         }
     }
 
+    // Event Listeners
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
-    
     canvas.addEventListener('touchstart', startDrawing, { passive: false });
     canvas.addEventListener('touchmove', draw, { passive: false });
     canvas.addEventListener('touchend', stopDrawing);
 }
 
-// Build and render a single task card
+// Component Renderer for a Task Card
 function renderTaskCard(task) {
-    // Backwards compatibility for old saved tasks
-    if(task.isText === undefined) task.isText = false;
-    if(task.textContent === undefined) task.textContent = "";
-
     const card = document.createElement('div');
-    card.className = `card ${task.done ? 'done-task' : ''}`;
+    card.className = `card ${task.done ? 'done' : ''}`;
     card.id = `task-${task.id}`;
     
     card.innerHTML = `
-        <div class="tools">
-            <div class="draw-tools" style="display: ${task.isText ? 'none' : 'flex'}; gap: 0.5rem; align-items: center;">
-                <input type="color" class="color-picker" value="#1a202c" title="Brush Color">
-                <input type="range" class="size-slider" min="1" max="25" value="4" title="Brush Size">
+        <div class="card-header">
+            <input type="text" class="card-title" placeholder="Task Title..." value="${task.title || ''}">
+            <div class="card-actions">
+                <button class="icon-btn check-btn" title="Mark Status">
+                    <i data-lucide="${task.done ? 'check-circle-2' : 'circle'}"></i>
+                </button>
+                <button class="icon-btn danger delete-btn" title="Delete Task">
+                    <i data-lucide="trash-2"></i>
+                </button>
             </div>
-            <div class="text-tools" style="display: ${task.isText ? 'flex' : 'none'}; font-weight: bold; color: rgba(0,0,0,0.5);">
-                ⌨️ Typing Mode
-            </div>
-            <button class="btn-toggle-mode">${task.isText ? '🖌️ Draw' : '⌨️ Type'}</button>
         </div>
-        <div class="task-content-area">
+
+        <div class="task-content">
             <canvas style="display: ${task.isText ? 'none' : 'block'};"></canvas>
-            <textarea class="text-mode-input" style="display: ${task.isText ? 'block' : 'none'};" placeholder="Type your quest here...">${task.textContent}</textarea>
+            <textarea class="text-mode-input" style="display: ${task.isText ? 'block' : 'none'};" placeholder="Add details...">${task.textContent || ''}</textarea>
         </div>
-        <div class="controls">
-            <button class="btn-clear">🗑️ Clear</button>
-            <button class="btn-done">${task.done ? '↩️ Undo' : '⭐ Done!'}</button>
+
+        <div class="toolbar">
+            <div class="draw-tools" style="visibility: ${task.isText ? 'hidden' : 'visible'};">
+                <input type="color" class="color-picker" value="#111827" title="Brush Color">
+                <input type="range" class="size-slider" min="1" max="40" value="6" title="Brush Size">
+                <button class="icon-btn clear-btn" title="Clear Canvas" style="margin-left:4px;">
+                    <i data-lucide="eraser"></i>
+                </button>
+            </div>
+            <button class="mode-toggle">
+                ${task.isText ? 'Switch to Draw' : 'Switch to Type'}
+            </button>
         </div>
     `;
     
+    // Dom Elements
+    const titleInput = card.querySelector('.card-title');
+    const checkBtn = card.querySelector('.check-btn');
+    const deleteBtn = card.querySelector('.delete-btn');
+    const clearBtn = card.querySelector('.clear-btn');
+    const modeToggle = card.querySelector('.mode-toggle');
     const canvas = card.querySelector('canvas');
     const textarea = card.querySelector('.text-mode-input');
-    const clearBtn = card.querySelector('.btn-clear');
-    const doneBtn = card.querySelector('.btn-done');
-    const toggleBtn = card.querySelector('.btn-toggle-mode');
     const drawTools = card.querySelector('.draw-tools');
-    const textTools = card.querySelector('.text-tools');
-    
+
+    // Init Engine
     setupCanvasDrawing(card, canvas, task);
-    
-    // Toggle Mode Logic (Draw <-> Type)
-    toggleBtn.addEventListener('click', () => {
-        if (task.done) return;
-        task.isText = !task.isText; // flip the mode
-        
-        // Update visibility
-        canvas.style.display = task.isText ? 'none' : 'block';
-        textarea.style.display = task.isText ? 'block' : 'none';
-        drawTools.style.display = task.isText ? 'none' : 'flex';
-        textTools.style.display = task.isText ? 'flex' : 'none';
-        toggleBtn.textContent = task.isText ? '🖌️ Draw' : '⌨️ Type';
-        
+
+    // Event Bindings
+    titleInput.addEventListener('input', (e) => {
+        task.title = e.target.value;
         saveTasks();
     });
 
-    // Save typing automatically
     textarea.addEventListener('input', (e) => {
         task.textContent = e.target.value;
         saveTasks();
     });
 
-    // Clear Button Logic
+    checkBtn.addEventListener('click', () => {
+        task.done = !task.done;
+        saveTasks();
+        renderAll(); // Full re-render to apply filtering/sorting
+        showToast(task.done ? 'Task marked complete' : 'Task restored to active', 'check-circle');
+    });
+
+    deleteBtn.addEventListener('click', () => {
+        tasks = tasks.filter(t => t.id !== task.id);
+        saveTasks();
+        card.remove(); // Remove immediately for UX
+        updateCounters();
+        showToast('Task deleted successfully', 'trash');
+    });
+
     clearBtn.addEventListener('click', () => {
-        if (task.done) return;
-        if (task.isText) {
-            textarea.value = "";
-            task.textContent = "";
-        } else {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            task.dataUrl = canvas.toDataURL();
-        }
+        if (task.done || task.isText) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        task.dataUrl = canvas.toDataURL();
         saveTasks();
     });
 
-    // Gamified Done Logic!
-    doneBtn.addEventListener('click', () => {
-        task.done = !task.done;
+    modeToggle.addEventListener('click', () => {
+        if (task.done) return;
+        task.isText = !task.isText;
         
-        if (task.done) {
-            card.classList.add('done-task');
-            doneBtn.textContent = '↩️ Undo';
-            textarea.disabled = true;
-            
-            // GAMIFICATION PAYOFF
-            playSuccessSound(); // Play 8-bit sound
-            
-            // Pop confetti from the card's location on screen
-            const rect = card.getBoundingClientRect();
-            confetti({
-                particleCount: 50,
-                spread: 60,
-                origin: { 
-                    x: (rect.left + (rect.width/2)) / window.innerWidth,
-                    y: (rect.top + (rect.height/2)) / window.innerHeight 
-                }
-            });
-            
-            giveXP(xpPerTask); // Award XP!
-
-        } else {
-            card.classList.remove('done-task');
-            doneBtn.textContent = '⭐ Done!';
-            textarea.disabled = false;
-        }
+        canvas.style.display = task.isText ? 'none' : 'block';
+        textarea.style.display = task.isText ? 'block' : 'none';
+        drawTools.style.visibility = task.isText ? 'hidden' : 'visible';
+        modeToggle.textContent = task.isText ? 'Switch to Draw' : 'Switch to Type';
         
         saveTasks();
     });
@@ -266,17 +214,98 @@ function renderTaskCard(task) {
     return card;
 }
 
-// Render all tasks onto the grid
+// Master Render Function (Handles filtering and sorting)
 function renderAll() {
-    grid.innerHTML = ''; 
-    tasks.forEach(task => grid.appendChild(renderTaskCard(task)));
+    grid.innerHTML = '';
+    
+    // Apply Sidebar Filters
+    let filteredTasks = tasks;
+    if (currentFilter === 'active') filteredTasks = tasks.filter(t => !t.done);
+    if (currentFilter === 'completed') filteredTasks = tasks.filter(t => t.done);
+
+    // Sort: Active tasks first, completed at the bottom. Then sort by ID (newest first).
+    filteredTasks.sort((a, b) => {
+        if (a.done === b.done) return b.id - a.id;
+        return a.done ? 1 : -1;
+    });
+
+    filteredTasks.forEach(task => grid.appendChild(renderTaskCard(task)));
+    
+    // Re-initialize SVG icons for newly rendered elements
+    if(window.lucide) { lucide.createIcons(); }
+    updateCounters();
 }
 
-// "Add New Quest" button logic
+// --- GLOBAL BINDINGS ---
+
+// Add New Task
 addBtn.addEventListener('click', () => {
-    tasks.push({ id: Date.now().toString(), dataUrl: null, done: false, isText: false, textContent: "" });
+    const newTask = { 
+        id: Date.now(), 
+        title: '',
+        dataUrl: null, 
+        done: false, 
+        isText: false, 
+        textContent: "" 
+    };
+    tasks.unshift(newTask); // Push to front
     saveTasks();
-    renderAll();
+    
+    // Switch filter to 'All' or 'Active' to ensure new task is visible
+    if(currentFilter === 'completed') {
+        document.getElementById('filter-all').click();
+    } else {
+        renderAll();
+    }
+    
+    // Auto-focus the new task's title for immediate typing
+    setTimeout(() => {
+        const firstCardTitle = grid.querySelector('.card-title');
+        if (firstCardTitle) firstCardTitle.focus();
+    }, 50);
 });
 
+// Sidebar Filter Navigation
+const filters = {
+    'filter-all': 'all',
+    'filter-active': 'active',
+    'filter-completed': 'completed'
+};
+
+Object.keys(filters).forEach(btnId => {
+    document.getElementById(btnId).addEventListener('click', (e) => {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentFilter = filters[btnId];
+        renderAll();
+    });
+});
+
+// Theme Toggle System
+const themeToggle = document.getElementById('theme-toggle');
+themeToggle.addEventListener('click', () => {
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.body.removeAttribute('data-theme');
+        themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+    } else {
+        document.body.setAttribute('data-theme', 'dark');
+        themeToggle.innerHTML = '<i data-lucide="sun"></i>';
+    }
+    if(window.lucide) { lucide.createIcons(); }
+});
+
+// Initialization
+if (tasks.length === 0) {
+    // Seed with a professional onboarding task
+    tasks.push({ 
+        id: Date.now(), 
+        title: 'Welcome to DrawDo Workspace', 
+        dataUrl: null, 
+        done: false, 
+        isText: true, 
+        textContent: "This is your new professional visual workspace.\n\n- Add titles to your tasks.\n- Sketch visual ideas or toggle to Text Mode for notes.\n- Use the sidebar to filter Active/Completed work.\n- Actually delete tasks using the trash icon.\n- Try the Dark Mode toggle in the top right." 
+    });
+    saveTasks();
+}
 renderAll();
