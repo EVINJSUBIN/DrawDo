@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DrawDo - Visual Tasks</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f4f4f5;
+            color: #18181b;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-bottom: 0.5rem; }
+        p { color: #71717a; margin-bottom: 2rem; }
+        
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        canvas {
+            border: 2px dashed #e4e4e7;
+            border-radius: 8px;
+            cursor: crosshair;
+            background: #fff;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn-clear { background: #fee2e2; color: #ef4444; }
+        .btn-done { background: #dcfce7; color: #22c55e; }
+        
+        #add-btn {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: #18181b;
+            color: white;
+            font-size: 1.1rem;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>DrawDo</h1>
+    <p>Draw your tasks. Keep it simple.</p>
+
+    <div id="grid">
+        <!-- Cards will be injected here by JS -->
+    </div>
+
+    <button id="add-btn">+ Add Task</button>
+
+    <script>
+        // Boilerplate ready for the 1-day sprint!
+        // TODO: Implement Canvas drawing logic (mousedown, mousemove, mouseup)
+        // TODO: Implement localStorage saving (canvas.toDataURL)
+        
+        function createTaskCard() {
+            const grid = document.getElementById('grid');
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            card.innerHTML = `
+                <canvas width="180" height="180"></canvas>
+                <div class="controls">
+                    <button class="btn-clear">Clear</button>
+                    <button class="btn-done">Done</button>
+                </div>
+            `;
+            grid.appendChild(card);
+            
+            // Note: Canvas event listeners will be hooked up here
+        }
+
+        document.getElementById('add-btn').addEventListener('click', createTaskCard);
+        
+        // Init with one blank task
+        createTaskCard();
+    </script>
+</body>
+</html>
