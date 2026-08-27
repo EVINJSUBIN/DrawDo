@@ -1,14 +1,12 @@
 // --- STATE MANAGEMENT ---
-// We use a new key to avoid conflicts with the old gamified data
 let tasks = JSON.parse(localStorage.getItem('drawdo_pro_tasks')) || [];
-let currentFilter = 'all'; // Filters: 'all', 'active', 'completed'
+let currentFilter = 'all'; 
 
 function saveTasks() {
     localStorage.setItem('drawdo_pro_tasks', JSON.stringify(tasks));
     updateCounters();
 }
 
-// Commercial-grade Toast Notification System
 function showToast(message, icon = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -16,13 +14,12 @@ function showToast(message, icon = 'info') {
     toast.innerHTML = `<i data-lucide="${icon}"></i> ${message}`;
     container.appendChild(toast);
     
-    // Render the injected icon
     if(window.lucide) { lucide.createIcons(); }
 
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100%)';
-        toast.style.transition = 'all 0.3s ease';
+        toast.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
@@ -36,13 +33,12 @@ function updateCounters() {
     document.getElementById('task-counter').textContent = `${activeCount} Active Task${activeCount !== 1 ? 's' : ''}`;
 }
 
-// Draw engine logic (Optimized for robustness)
+// Draw engine logic (Optimized + Neon Mode!)
 function setupCanvasDrawing(card, canvas, task) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const colorPicker = card.querySelector('.color-picker');
     const sizeSlider = card.querySelector('.size-slider');
     
-    // High-resolution internal canvas for crisp drawing
     canvas.width = 600;
     canvas.height = 600;
 
@@ -50,7 +46,6 @@ function setupCanvasDrawing(card, canvas, task) {
     let lastX = 0;
     let lastY = 0;
 
-    // Load saved image
     if (task.dataUrl) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -85,7 +80,17 @@ function setupCanvasDrawing(card, canvas, task) {
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(x, y);
-        ctx.strokeStyle = colorPicker.value;
+        
+        // --- THE NEON MAGIC ---
+        if (task.isNeon) {
+            ctx.shadowBlur = parseInt(sizeSlider.value) * 1.5;
+            ctx.shadowColor = colorPicker.value;
+            ctx.strokeStyle = '#ffffff'; // White core for neon
+        } else {
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = colorPicker.value;
+        }
+
         ctx.lineWidth = sizeSlider.value;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -104,7 +109,6 @@ function setupCanvasDrawing(card, canvas, task) {
         }
     }
 
-    // Event Listeners
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
@@ -114,20 +118,44 @@ function setupCanvasDrawing(card, canvas, task) {
     canvas.addEventListener('touchend', stopDrawing);
 }
 
-// Component Renderer for a Task Card
+// Interactive 3D Tilt Effect
+function setup3DTilt(card) {
+    card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left; 
+        const y = e.clientY - rect.top;  
+        
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        // Calculate tilt (Max 8 degrees for subtlety)
+        const rotateX = ((y - centerY) / centerY) * -8; 
+        const rotateY = ((x - centerX) / centerX) * 8;
+        
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+    });
+}
+
+// Component Renderer
 function renderTaskCard(task) {
+    if (task.isNeon === undefined) task.isNeon = false; // Backwards compatibility
+
     const card = document.createElement('div');
     card.className = `card ${task.done ? 'done' : ''}`;
     card.id = `task-${task.id}`;
     
     card.innerHTML = `
         <div class="card-header">
-            <input type="text" class="card-title" placeholder="Task Title..." value="${task.title || ''}">
+            <input type="text" class="card-title" placeholder="What's the mission?" value="${task.title || ''}">
             <div class="card-actions">
-                <button class="icon-btn check-btn" title="Mark Status">
+                <button class="icon-btn check-btn" title="Complete Mission">
                     <i data-lucide="${task.done ? 'check-circle-2' : 'circle'}"></i>
                 </button>
-                <button class="icon-btn danger delete-btn" title="Delete Task">
+                <button class="icon-btn danger delete-btn" title="Obliterate Task">
                     <i data-lucide="trash-2"></i>
                 </button>
             </div>
@@ -135,19 +163,24 @@ function renderTaskCard(task) {
 
         <div class="task-content">
             <canvas style="display: ${task.isText ? 'none' : 'block'};"></canvas>
-            <textarea class="text-mode-input" style="display: ${task.isText ? 'block' : 'none'};" placeholder="Add details...">${task.textContent || ''}</textarea>
+            <textarea class="text-mode-input" style="display: ${task.isText ? 'block' : 'none'};" placeholder="Type coordinates...">${task.textContent || ''}</textarea>
         </div>
 
         <div class="toolbar">
             <div class="draw-tools" style="visibility: ${task.isText ? 'hidden' : 'visible'};">
-                <input type="color" class="color-picker" value="#111827" title="Brush Color">
-                <input type="range" class="size-slider" min="1" max="40" value="6" title="Brush Size">
-                <button class="icon-btn clear-btn" title="Clear Canvas" style="margin-left:4px;">
+                <input type="color" class="color-picker" value="#3b82f6" title="Brush Color">
+                <input type="range" class="size-slider" min="1" max="40" value="6" title="Brush Thickness">
+                
+                <button class="icon-btn neon-btn ${task.isNeon ? 'active-neon' : ''}" title="Toggle Neon Glow" style="margin-left:8px;">
+                    <i data-lucide="zap"></i>
+                </button>
+
+                <button class="icon-btn clear-btn" title="Wipe Slate" style="margin-left:4px;">
                     <i data-lucide="eraser"></i>
                 </button>
             </div>
             <button class="mode-toggle">
-                ${task.isText ? 'Switch to Draw' : 'Switch to Type'}
+                ${task.isText ? 'Draw Mode' : 'Type Mode'}
             </button>
         </div>
     `;
@@ -157,13 +190,15 @@ function renderTaskCard(task) {
     const checkBtn = card.querySelector('.check-btn');
     const deleteBtn = card.querySelector('.delete-btn');
     const clearBtn = card.querySelector('.clear-btn');
+    const neonBtn = card.querySelector('.neon-btn');
     const modeToggle = card.querySelector('.mode-toggle');
     const canvas = card.querySelector('canvas');
     const textarea = card.querySelector('.text-mode-input');
     const drawTools = card.querySelector('.draw-tools');
 
-    // Init Engine
+    // Init Engine & Effects
     setupCanvasDrawing(card, canvas, task);
+    setup3DTilt(card);
 
     // Event Bindings
     titleInput.addEventListener('input', (e) => {
@@ -179,16 +214,20 @@ function renderTaskCard(task) {
     checkBtn.addEventListener('click', () => {
         task.done = !task.done;
         saveTasks();
-        renderAll(); // Full re-render to apply filtering/sorting
-        showToast(task.done ? 'Task marked complete' : 'Task restored to active', 'check-circle');
+        renderAll(); 
+        showToast(task.done ? 'Mission Accomplished' : 'Mission Reactivated', 'check-circle');
     });
 
+    // The GOATED Shatter Delete
     deleteBtn.addEventListener('click', () => {
-        tasks = tasks.filter(t => t.id !== task.id);
-        saveTasks();
-        card.remove(); // Remove immediately for UX
-        updateCounters();
-        showToast('Task deleted successfully', 'trash');
+        card.classList.add('shattering'); // Trigger CSS Animation
+        setTimeout(() => {
+            tasks = tasks.filter(t => t.id !== task.id);
+            saveTasks();
+            card.remove(); 
+            updateCounters();
+            showToast('Task Obliterated', 'zap');
+        }, 550); // Wait for animation to finish
     });
 
     clearBtn.addEventListener('click', () => {
@@ -199,6 +238,18 @@ function renderTaskCard(task) {
         saveTasks();
     });
 
+    neonBtn.addEventListener('click', () => {
+        if (task.done || task.isText) return;
+        task.isNeon = !task.isNeon;
+        if(task.isNeon) {
+            neonBtn.classList.add('active-neon');
+            showToast('Neon Brush Activated', 'sparkles');
+        } else {
+            neonBtn.classList.remove('active-neon');
+        }
+        saveTasks();
+    });
+
     modeToggle.addEventListener('click', () => {
         if (task.done) return;
         task.isText = !task.isText;
@@ -206,7 +257,7 @@ function renderTaskCard(task) {
         canvas.style.display = task.isText ? 'none' : 'block';
         textarea.style.display = task.isText ? 'block' : 'none';
         drawTools.style.visibility = task.isText ? 'hidden' : 'visible';
-        modeToggle.textContent = task.isText ? 'Switch to Draw' : 'Switch to Type';
+        modeToggle.textContent = task.isText ? 'Draw Mode' : 'Type Mode';
         
         saveTasks();
     });
@@ -214,16 +265,14 @@ function renderTaskCard(task) {
     return card;
 }
 
-// Master Render Function (Handles filtering and sorting)
+// Master Render Function
 function renderAll() {
     grid.innerHTML = '';
     
-    // Apply Sidebar Filters
     let filteredTasks = tasks;
     if (currentFilter === 'active') filteredTasks = tasks.filter(t => !t.done);
     if (currentFilter === 'completed') filteredTasks = tasks.filter(t => t.done);
 
-    // Sort: Active tasks first, completed at the bottom. Then sort by ID (newest first).
     filteredTasks.sort((a, b) => {
         if (a.done === b.done) return b.id - a.id;
         return a.done ? 1 : -1;
@@ -231,12 +280,9 @@ function renderAll() {
 
     filteredTasks.forEach(task => grid.appendChild(renderTaskCard(task)));
     
-    // Re-initialize SVG icons for newly rendered elements
     if(window.lucide) { lucide.createIcons(); }
     updateCounters();
 }
-
-// --- GLOBAL BINDINGS ---
 
 // Add New Task
 addBtn.addEventListener('click', () => {
@@ -246,19 +292,18 @@ addBtn.addEventListener('click', () => {
         dataUrl: null, 
         done: false, 
         isText: false, 
-        textContent: "" 
+        textContent: "",
+        isNeon: false
     };
-    tasks.unshift(newTask); // Push to front
+    tasks.unshift(newTask); 
     saveTasks();
     
-    // Switch filter to 'All' or 'Active' to ensure new task is visible
     if(currentFilter === 'completed') {
         document.getElementById('filter-all').click();
     } else {
         renderAll();
     }
     
-    // Auto-focus the new task's title for immediate typing
     setTimeout(() => {
         const firstCardTitle = grid.querySelector('.card-title');
         if (firstCardTitle) firstCardTitle.focus();
@@ -281,7 +326,7 @@ Object.keys(filters).forEach(btnId => {
     });
 });
 
-// Theme Toggle System
+// Theme Toggle
 const themeToggle = document.getElementById('theme-toggle');
 themeToggle.addEventListener('click', () => {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
@@ -297,14 +342,14 @@ themeToggle.addEventListener('click', () => {
 
 // Initialization
 if (tasks.length === 0) {
-    // Seed with a professional onboarding task
     tasks.push({ 
         id: Date.now(), 
-        title: 'Welcome to DrawDo Workspace', 
+        title: 'Try the GOATED Features', 
         dataUrl: null, 
         done: false, 
-        isText: true, 
-        textContent: "This is your new professional visual workspace.\n\n- Add titles to your tasks.\n- Sketch visual ideas or toggle to Text Mode for notes.\n- Use the sidebar to filter Active/Completed work.\n- Actually delete tasks using the trash icon.\n- Try the Dark Mode toggle in the top right." 
+        isText: false, 
+        textContent: "",
+        isNeon: true 
     });
     saveTasks();
 }
