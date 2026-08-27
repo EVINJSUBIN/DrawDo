@@ -3,24 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DrawDo - Visual Tasks</title>
-    <!-- Link to our external CSS file for styling -->
+    <title>DrawDo - Gamified Tasks</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="header-container">
-        <h1>DrawDo ✨</h1>
-        <p>Your beautiful, visual to-do space.</p>
+        <h1>DrawDo 🎮</h1>
+        <p>Your gamified visual to-do space.</p>
+        
+        <!-- Gamification XP Bar -->
+        <div class="stats-container">
+            <div class="level-badge">LVL <span id="level-display">1</span></div>
+            <div class="xp-bar-wrapper">
+                <div class="xp-bar" id="xp-fill"></div>
+            </div>
+            <div class="xp-text"><span id="xp-display">0</span> / 100 XP</div>
+        </div>
     </div>
 
-    <!-- The grid where our drawing cards will live -->
     <div id="grid"></div>
 
-    <!-- Button to add more tasks -->
-    <button id="add-btn">+ Add New Canvas</button>
+    <button id="add-btn">⚔️ Add New Quest</button>
 
-    <!-- Link to our external JavaScript file for logic -->
+    <!-- Confetti Library for Gamification -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
