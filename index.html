@@ -5,19 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DrawDo - Professional Visual Tasks</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Lucide Icons for clean, professional SVG icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-
     <div class="app-container">
-        <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="brand">
                 <i data-lucide="pen-tool"></i>
                 <h2>DrawDo.</h2>
             </div>
-            
             <nav class="nav-menu">
                 <button class="nav-item active" id="filter-all">
                     <i data-lucide="layout-grid"></i> All Tasks
@@ -29,38 +25,29 @@
                     <i data-lucide="check-circle-2"></i> Completed
                 </button>
             </nav>
-            
             <div class="sidebar-footer">
                 <button id="add-btn" class="btn-primary w-full">
                     <i data-lucide="plus"></i> New Task
                 </button>
             </div>
         </aside>
-
-        <!-- Main Workspace -->
         <main class="main-content">
             <header class="topbar">
                 <div>
                     <h1 class="page-title">Tasks</h1>
                     <p class="text-muted" id="task-counter">0 Active Tasks</p>
                 </div>
-                
                 <div class="topbar-actions">
                     <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
                         <i data-lucide="moon"></i>
                     </button>
                 </div>
             </header>
-
             <div id="grid" class="task-grid">
-                <!-- Task Cards will be dynamically injected here -->
             </div>
         </main>
     </div>
-
-    <!-- Toast Notification Container -->
     <div id="toast-container"></div>
-
     <script src="script.js"></script>
 </body>
 </html>
